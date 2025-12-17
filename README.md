@@ -1,4 +1,4 @@
-# 📰 Fake News Detector  (AI-ML Powered)
+# 📰 Fake News Detector using AI - ML
 
 An AI-driven web application designed to analyze news content across multiple domains and identify potentially misleading or fabricated information. This project aims to combat the rapid spread of misinformation by empowering users with clarity, credibility, and confidence in what they read.
 
