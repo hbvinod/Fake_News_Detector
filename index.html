@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fake News Detector</title>
+
+  <style>
+    :root {
+      --bg-dark: #0a0e27;
+      --bg-mid: #1a1f3a;
+      --text-main: #e8eaf6;
+      --text-light: #b8bbd6;
+      --accent: #667eea;
+      --accent2: #764ba2;
+      --real: #26de81;
+      --fake: #ff4757;
+
+      --radius: 1rem;
+      --pad: 1rem;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(-45deg, #0a0e27, #1a1f3a, #2a2f4a, #1a1f3a);
+      background-size: 400% 400%;
+      animation: bgShift 15s infinite ease;
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    @keyframes bgShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ----------------------------------------------------
+       HERO SECTION
+    ---------------------------------------------------- */
+    .hero {
+      padding: 8rem 4rem;
+      text-align: center;
+      animation: fadeUp 1s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero h1 {
+      font-size: 4.4rem;
+      background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+      -webkit-background-clip: text;
+      color: transparent;
+      animation: slideTitle 10s linear infinite;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    @keyframes slideTitle {
+      0% { transform: translateX(90%); }
+      100% { transform: translateX(-90%); }
+    }
+
+    .hero-cta-btn {
+      margin-top: 4rem;
+      padding: 1rem 2.5rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-radius: var(--radius);
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      cursor: pointer;
+      color: white;
+      transition: 0.25s;
+    }
+
+    .hero-cta-btn:hover {
+      transform: scale(1.06);
+    }
+
+    /* ----------------------------------------------------
+       VIEW HANDLING (no absolute overlap)
+    ---------------------------------------------------- */
+    .view {
+      display: none;
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    .view.active {
+      display: block;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* ----------------------------------------------------
+       DOMAINS GRID
+    ---------------------------------------------------- */
+    .domains-container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 2rem;
+    }
+
+    .domains-grid {
+      margin-top: 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 2rem;
+    }
+
+    .domain-tile {
+      padding: 2rem;
+      background: rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.12);
+      transition: 0.25s ease;
+    }
+
+    .domain-tile:hover {
+      transform: translateY(-8px) scale(1.03);
+      border-color: var(--accent);
+    }
+
+    .domain-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+    }
+
+    /* ----------------------------------------------------
+       WORKSPACE
+    ---------------------------------------------------- */
+    .workspace-container {
+      max-width: 900px;
+      margin: auto;
+      padding: 2rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 1rem;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: var(--radius);
+      color: white;
+      font-size: 1.05rem;
+    }
+
+    .btn {
+      margin-top: 1rem;
+      padding: 0.8rem 1.6rem;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      color: white;
+      background: var(--accent);
+    }
+
+    .btn-secondary {
+      margin-right: 0.6rem;
+      margin-top: 0;
+      background: rgba(255,255,255,0.2);
+      color: var(--text-main);
+      padding: 0.6rem 1rem;
+      border-radius: 0.6rem;
+      border: none;
+      cursor: pointer;
+    }
+
+    .example-item {
+      margin: 0.4rem 0;
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.12);
+      cursor: pointer;
+      transition: 0.25s;
+      display: inline-block;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .example-item:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* ----------------------------------------------------
+       RESULT SECTION
+    ---------------------------------------------------- */
+    .result-section {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: rgba(0,0,0,0.35);
+      border-radius: var(--radius);
+    }
+
+    /* Evidence lists, claim boxes */
+    .evidence-list {
+      margin-top: 0.75rem;
+      padding-left: 1rem;
+    }
+    .evidence-list li {
+      margin: 0.35rem 0;
+      list-style: disc;
+      line-height: 1.45;
+    }
+
+    .claim-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 0.6rem;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .claim-status.real { color: var(--real); font-weight:700; }
+    .claim-status.fake { color: var(--fake); font-weight:700; }
+    .claim-status.unknown { color: var(--text-light); font-weight:700; }
+
+    a.evidence-link { color: var(--accent2); text-decoration: none; }
+    a.evidence-link:hover { text-decoration: underline; }
+
+    /* spinner (small) */
+    .spinner {
+      display:inline-block;
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      border:2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right:6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================
+       ADDED: Carousel styles + larger hero description
+       (Only additions — everything else unchanged)
+    ============================ */
+    .hero-description {
+      font-size: 1.25rem; /* increased font size only */
+      line-height: 1.8;
+      color: var(--text-light);
+      max-width: 980px;
+      margin: 1.25rem auto 0 auto;
+    }
+
+    .carousel-wrap {
+      width: 100%;
+      max-width: 900px;
+      margin: 1.75rem auto 0;
+      position: relative;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.35);
+    }
+
+    .carousel-slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      padding: 1.6rem;
+      background: linear-gradient(135deg, rgba(102,126,234,0.06), rgba(118,75,162,0.06));
+      color: var(--text-main);
+      transform: translateY(10px) scale(0.98);
+      opacity: 0;
+      transition: opacity 900ms cubic-bezier(.2,.9,.2,1), transform 900ms cubic-bezier(.2,.9,.2,1);
+    }
+
+    .carousel-slide.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .carousel-slide img {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 28px rgba(0,0,0,0.45));
+    }
+
+    .carousel-caption {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text-main);
+    }
+
+    /* small dot indicators */
+    .carousel-dots {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 6;
+    }
+    .carousel-dot {
+      width: 8px;
+      height: 8px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 200ms;
+    }
+    .carousel-dot.active {
+      background: white;
+    }
+
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- ================================
+       HERO VIEW
+  ================================= -->
+  <section class="hero view active" id="heroView">
+    <h1>Fake News Detector</h1>
+
+    <p class="hero-description">
+      Every headline shapes how we think, vote, react, and believe.
+      But in a world where fabricated stories mimic truth with frightening precision, certainty has become rare.
+      This AI system acts as your digital truth-shield—reading between the lines, uncovering hidden bias, and separating intention from information.
+      Because your perspective deserves facts, not illusions.
+      “Truth deserves technology that protects it.”
+    </p>
+
+    <!-- ADDED: Carousel (only insertion) -->
+    <div class="carousel-wrap" aria-hidden="false">
+      <div class="carousel-slide active" data-index="0" role="group" aria-roledescription="slide" aria-label="Slide 1">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828843.png" alt="AI icon">
+        <div class="carousel-caption">AI-powered pattern detection</div>
+      </div>
+
+      <div class="carousel-slide" data-index="1" role="group" aria-roledescription="slide" aria-label="Slide 2">
+        <img src="https://cdn-icons-png.flaticon.com/512/841/841364.png" alt="Validation icon">
+        <div class="carousel-caption">Cross-checks authoritative sources</div>
+      </div>
+
+      <div class="carousel-slide" data-index="2" role="group" aria-roledescription="slide" aria-label="Slide 3">
+        <img src="https://cdn-icons-png.flaticon.com/512/3208/3208674.png" alt="Domains icon">
+        <div class="carousel-caption">Multi-domain analysis</div>
+      </div>
+
+      <div class="carousel-dots" aria-hidden="true">
+        <div class="carousel-dot active" data-dot="0" aria-label="Go to slide 1"></div>
+        <div class="carousel-dot" data-dot="1" aria-label="Go to slide 2"></div>
+        <div class="carousel-dot" data-dot="2" aria-label="Go to slide 3"></div>
+      </div>
+    </div>
+    <!-- end carousel -->
+
+    <button class="hero-cta-btn" id="openDomainsBtn">
+      Explore Fake News
+    </button>
+  </section>
+
+
+
+  <!-- ================================
+       DOMAINS SELECTION VIEW
+  ================================= -->
+  <section class="domains-view view" id="domainsView">
+    <div class="domains-container">
+
+      <button class="btn-secondary" id="backToHomeBtn">⬅ Back</button>
+      <h2 style="margin-top:1rem;">Select a News Domain that you want to encounter</h2>
+
+      <div class="domains-grid" id="domainsGrid">
+        <!-- Domain tiles injected by JS -->
+      </div>
+
+    </div>
+  </section>
+
+
+
+  <!-- ================================
+       WORKSPACE VIEW
+  ================================= -->
+  <section class="workspace-view view" id="workspaceView">
+    <div class="workspace-container">
+
+      <button class="btn-secondary" id="backBtn">⬅ Back</button>
+
+      <h2 id="workspaceTitle" style="margin-top:1rem;"></h2>
+
+      <div class="workspace-card">
+
+        <div id="workspaceThumbnail"
+             style="font-size:4rem; text-align:center; margin-bottom:1rem;">
+        </div>
+
+        <label class="input-label">Enter any News Headline or article </label>
+        <textarea id="newsTextarea" placeholder="Type or paste news text..."></textarea>
+
+        <div style="margin-top:1rem;">
+          <button id="detectBtn" class="btn">🔍 Detect</button>
+          <button id="clearBtn" class="btn btn-secondary">Clear</button>
+        </div>
+
+        <h3 style="margin-top:2rem;">Try examples</h3>
+        <div id="examplesList"></div>
+
+
+        <!-- ===============================
+             RESULT SECTION
+        ================================= -->
+        <div class="result-section" id="resultSection" style="display:none;">
+          <h2 id="resultText"></h2>
+
+          <h3 style="margin-top:1rem;">
+            Confidence: <span id="confidenceValue"></span>
+          </h3>
+
+          <div id="explanationPoints" style="margin-top:1rem;"></div>
+
+          <!-- aggregated evidence lists -->
+          <div id="aggEvidence" style="margin-top:1rem;"></div>
+
+          <!-- per-claim breakdown -->
+          <div id="claimsContainer" style="margin-top:1rem;"></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* =====================================================
+   HELPER: SHOW A VIEW (Hero / Domains / Workspace)
+===================================================== */
+function showView(id) {
+  document.querySelectorAll(".view").forEach(v => {
+    v.classList.remove("active");
+  });
+  document.getElementById(id).classList.add("active");
+}
+
+
+
+/* =====================================================
+   DOMAIN LIST
+===================================================== */
+const domains = [
+{
+  id: "education",
+  name: "Education",
+  subtitle: "Exams, Schools, Colleges, Careers",
+  icon: "🎓",
+  examples: [
+    "National exam board announces major syllabus change!",
+    "Top university caught in admission scam—students protest",
+    "BREAKING: New scholarship program launched for millions"
+  ]
+},
+
+  {
+    id: "political",
+    name: "Political News",
+    subtitle: "Election, Governance, Policy",
+    icon: "🏛️",
+    examples: [
+      "Senator guarantees tax cuts — experts disagree!",
+      "New bill passes Senate with huge support",
+      "Secret meeting found influencing elections"
+    ]
+  },
+  {
+    id: "technology",
+    name: "Technology",
+    subtitle: "Innovation, Gadgets, AI",
+    icon: "💻",
+    examples: [
+      "Tech company secretly tracks users without consent!",
+      "AI model beats all benchmarks in new test",
+      "BREAKING: Phone companies hiding major feature"
+    ]
+  },
+  {
+    id: "sports",
+    name: "Sports",
+    subtitle: "Matches, Leagues, Players",
+    icon: "⚽",
+    examples: [
+      "Star player uses illegal method for victory!",
+      "Team advances to finals after overtime win",
+      "Coach reveals shocking training trick"
+    ]
+  },
+  {
+  id: "international",
+  name: "International",
+  subtitle: "World News, Global Affairs, Diplomacy",
+  icon: "🌐",
+  examples: [
+    "Global tension rises as two major nations clash over borders!",
+    "BREAKING: International summit ends with unexpected agreement",
+    "World leaders secretly discuss new climate action plan"
+  ]
+},
+    {
+  id: "entertainment",
+  name: "Entertainment",
+  subtitle: "Movies, Celebrities, OTT",
+  icon: "🎬",
+  examples: [
+    "Famous actor caught in huge controversy!",
+    "Blockbuster movie breaks all-time streaming records",
+    "BREAKING: Celeb couple announces sudden separation"
+  ]
+}
+,
+  {
+  id: "business",
+  name: "Business",
+  subtitle: "Markets, Industry, Economy",
+  icon: "💼",
+  examples: [
+    "Stock market crashes after unexpected announcement!",
+    "Top company accused of hiding losses for years",
+    "New startup becomes unicorn in record time"
+  ]
+},
+{
+  id: "lifestyle",
+  name: "Lifestyle",
+  subtitle: "Travel, Food, Culture",
+  icon: "🌍",
+  examples: [
+    "New travel destination becomes global sensation",
+    "Doctors warn against trending diet on social media",
+    "BREAKING: Fashion brand accused of unethical practices"
+  ]
+}
+
+
+
+];
+
+let currentDomain = null;
+
+
+
+/* =====================================================
+   RENDER DOMAIN TILES
+===================================================== */
+function renderDomainTiles() {
+  const grid = document.getElementById("domainsGrid");
+  grid.innerHTML = "";
+
+  domains.forEach(domain => {
+    const tile = document.createElement("div");
+    tile.className = "domain-tile";
+
+    tile.innerHTML = `
+      <div class="domain-icon">${domain.icon}</div>
+      <h3>${domain.name}</h3>
+      <p>${domain.subtitle}</p>
+    `;
+
+    tile.onclick = () => openWorkspace(domain);
+    grid.appendChild(tile);
+  });
+}
+
+
+
+/* =====================================================
+   NAVIGATION HANDLERS
+===================================================== */
+function openDomains() {
+  showView("domainsView");
+}
+
+function openWorkspace(domain) {
+  currentDomain = domain;
+
+  showView("workspaceView");
+
+  document.getElementById("workspaceTitle").textContent = domain.name;
+  document.getElementById("workspaceThumbnail").textContent = domain.icon;
+
+  const list = document.getElementById("examplesList");
+  list.innerHTML = "";
+
+  domain.examples.forEach(example => {
+    const btn = document.createElement("button");
+    btn.className = "example-item";
+    btn.textContent = example;
+    btn.onclick = () => {
+      document.getElementById("newsTextarea").value = example;
+    };
+    list.appendChild(btn);
+  });
+
+  document.getElementById("resultSection").style.display = "none";
+}
+
+function goBackHome() {
+  showView("heroView");
+}
+
+function goBackToDomains() {
+  showView("domainsView");
+}
+
+
+
+/* =====================================================
+   BACKEND API CALL
+   (assumes backend returns the richer structure:
+    verdict, confidence (0-1), explanation,
+    supporting_evidence (array), counter_evidence (array),
+    detailed_claims: [{ id, text, status, confidence, explanation, supporting_evidence, counter_evidence }, ...]
+   )
+===================================================== */
+async function detectFakeNews(text) {
+  try {
+    const response = await fetch("/api/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      console.error("API error", response.status, body);
+      return {
+        verdict: "MIXED",
+        confidence: 0,
+        explanation: "Backend error: " + response.statusText,
+        supporting_evidence: [],
+        counter_evidence: [],
+        detailed_claims: []
+      };
+    }
+    return await response.json();
+  } catch (error) {
+    console.log("Backend unreachable:", error);
+    return {
+      verdict: "MIXED",
+      confidence: 0,
+      explanation: "Backend unreachable — make sure FastAPI is running.",
+      supporting_evidence: [],
+      counter_evidence: [],
+      detailed_claims: []
+    };
+  }
+}
+
+
+
+/* =====================================================
+   UTILS: parse "title — url" or extract url within a string
+   returns { title, url } where url may be null
+===================================================== */
+function parseEvidenceString(s) {
+  if (!s) return { title: "", url: null };
+  const emDashIndex = s.indexOf("—");
+  if (emDashIndex !== -1) {
+    const left = s.slice(0, emDashIndex).trim();
+    const right = s.slice(emDashIndex + 1).trim();
+    if (right.startsWith("http://") || right.startsWith("https://")) {
+      return { title: left || right, url: right };
+    }
+    if (left.startsWith("http://") || left.startsWith("https://")) {
+      return { title: right || left, url: left };
+    }
+    if (right.startsWith("www.") || right.includes(".com") || right.includes(".org") || right.includes("http")) {
+      const url = right.includes("http") ? right : "http://" + right;
+      return { title: left, url };
+    }
+    return { title: s, url: null };
+  }
+
+  const urlMatch = s.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch) {
+    const url = urlMatch[0];
+    const title = s.replace(url, "").trim() || url;
+    return { title, url };
+  }
+
+  return { title: s.trim(), url: null };
+}
+
+function buildEvidenceList(evidenceArray) {
+  const ul = document.createElement("ul");
+  ul.className = "evidence-list";
+  if (!evidenceArray || evidenceArray.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "No evidence provided.";
+    ul.appendChild(li);
+    return ul;
+  }
+
+  evidenceArray.forEach(item => {
+    const li = document.createElement("li");
+    const parsed = parseEvidenceString(item);
+    if (parsed.url) {
+      const a = document.createElement("a");
+      a.href = parsed.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.className = "evidence-link";
+      a.textContent = parsed.title || parsed.url;
+      li.appendChild(a);
+    } else {
+      li.innerHTML = parsed.title;
+    }
+    ul.appendChild(li);
+  });
+  return ul;
+}
+
+/* remove claim-count summary lines like "1 real claim(s), 0 fake..." from text */
+function stripClaimCounts(text) {
+  if (!text) return text;
+  // remove typical count patterns
+  return text.replace(/\d+\s+real claim(?:s)?[^\n]*[.,]?\s*/i, "")
+             .replace(/\d+\s+fake(?:\/contradicted)? claim(?:s)?[^\n]*[.,]?\s*/i, "")
+             .replace(/\d+\s+unknown claim(?:s)?[^\n]*[.,]?\s*/i, "")
+             .replace(/^[\s-–—:]*/,'').trim();
+}
+
+/* =====================================================
+   RUN DETECTION
+===================================================== */
+async function performDetection() {
+  const text = document.getElementById("newsTextarea").value.trim();
+  if (!text) return;
+
+  const btn = document.getElementById("detectBtn");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span>Analyzing...`;
+
+  const data = await detectFakeNews(text);
+
+  // If backend returned confidence as percent (0-100) accidentally, normalize to 0-1 safely
+  let rawConfidence = typeof data.confidence === "number" ? data.confidence : 0;
+  if (rawConfidence > 1.0) rawConfidence = Math.min(1, rawConfidence / 100);
+
+  // build displayObj
+  const displayObj = {
+    // fallback: map verdict if present; otherwise infer
+    verdict: (data.verdict || "").toString().toUpperCase(),
+    // keep confidence as 0..1
+    confidence: rawConfidence,
+    explanations: []
+  };
+
+
+
+  // prefer summary then explanation if present, but strip claim-count lines
+if (typeof data.summary === "string") {
+  const s = stripClaimCounts(data.summary).trim();
+  if (s.length) displayObj.explanations.push(s);
+}
+
+if (typeof data.explanation === "string") {
+  const e = stripClaimCounts(data.explanation).trim();
+  if (e.length) displayObj.explanations.push(e);
+}
+
+
+
+
+
+  // final render
+  displayResults(displayObj, data);
+
+  btn.disabled = false;
+  btn.innerHTML = "🔍 Detect";
+}
+
+
+
+/* =====================================================
+   DISPLAY RESULTS & DETAILED BREAKDOWN
+   - displayObj: { verdict, confidence (0..1), explanations[] }
+   - fullData: original API response
+===================================================== */
+function mapVerdictLabel(verdictStr) {
+  const v = (verdictStr || "").toString().toUpperCase().trim();
+  if (v === "REAL") return "Real";
+  if (v === "FAKE") return "Fake";
+  if (v === "PARTIALLY_REAL" || v === "PARTIALLY REAL") return "Partially Real";
+  if (v === "PARTIALLY_FAKE" || v === "PARTIALLY FAKE") return "Partially Fake";
+  if (v === "MIXED") return "Mixed";
+  // fallback: if contains PARTIALLY or MIXED keywords
+  if (v.includes("PARTIAL")) {
+    if (v.includes("FAKE")) return "Partially Fake";
+    if (v.includes("REAL")) return "Partially Real";
+    return "Partially Real";
+  }
+  if (v.includes("MIX")) return "Mixed";
+  // last fallback: treat truthiness
+  return (v.includes("FAKE") || v.includes("UNKNOWN") || v.includes("UNSURE")) ? "Mixed" : "Real";
+}
+
+function displayResults(displayObj, fullData = {}) {
+  const section = document.getElementById("resultSection");
+
+  // map verdict label exactly to the allowed set
+  const label = mapVerdictLabel(displayObj.verdict || fullData.verdict);
+  document.getElementById("resultText").textContent = label;
+
+  // color by verdict
+  const color = (label === "Fake" || label === "Partially Fake") ? "#ff4757"
+              : (label === "Real" || label === "Partially Real") ? "#20bf6b"
+              : "#f0c419";
+  document.getElementById("resultText").style.color = color;
+
+  // confidence show 0..1 with 2 decimals
+  const conf = (typeof displayObj.confidence === "number") ? displayObj.confidence : 0;
+  document.getElementById("confidenceValue").textContent = conf.toFixed(2);
+
+  // explanations - strip claim-count lines
+  const explainBox = document.getElementById("explanationPoints");
+  explainBox.innerHTML = "";
+  const expls = displayObj.explanations && displayObj.explanations.length ? displayObj.explanations : [fullData.explanation || "No explanation provided."];
+  expls.forEach(e => {
+    const cleaned = stripClaimCounts(e);
+    if (cleaned) {
+      const p = document.createElement("p");
+      p.style.marginBottom = "0.45rem";
+      p.innerHTML = cleaned;
+      explainBox.appendChild(p);
+    }
+  });
+
+  // aggregated evidence (supporting / counter)
+  const agg = document.getElementById("aggEvidence");
+  agg.innerHTML = "";
+
+  const supHeader = document.createElement("h4");
+  supHeader.textContent = "Supporting evidence";
+  supHeader.style.marginTop = "1rem";
+  agg.appendChild(supHeader);
+  const supList = buildEvidenceList(fullData.supporting_evidence || []);
+  agg.appendChild(supList);
+
+  const cntHeader = document.createElement("h4");
+  cntHeader.textContent = "Counter-evidence";
+  cntHeader.style.marginTop = "0.75rem";
+  agg.appendChild(cntHeader);
+  const cntList = buildEvidenceList(fullData.counter_evidence || []);
+  agg.appendChild(cntList);
+
+  // per-claim breakdown
+  const claimsContainer = document.getElementById("claimsContainer");
+  claimsContainer.innerHTML = "";
+
+  const claims = fullData.detailed_claims || [];
+
+  if (!claims.length) {
+    const note = document.createElement("p");
+    note.style.marginTop = "0.75rem";
+    note.style.color = "var(--text-light)";
+    note.textContent = "No claim-level breakdown available from the backend.";
+    claimsContainer.appendChild(note);
+  } else {
+    claims.forEach((c, idx) => {
+      const box = document.createElement("div");
+      box.className = "claim-box";
+
+      const header = document.createElement("div");
+      header.style.display = "flex";
+      header.style.justifyContent = "space-between";
+      header.style.alignItems = "baseline";
+      header.style.gap = "1rem";
+
+      const left = document.createElement("div");
+      const claimTitle = document.createElement("div");
+      claimTitle.innerHTML = `<strong>Claim ${idx+1}:</strong> ${c.text}`;
+      left.appendChild(claimTitle);
+
+      const right = document.createElement("div");
+      const statusSpan = document.createElement("span");
+      const st = (c.status || "UNKNOWN").toString().toUpperCase();
+      statusSpan.textContent = st === "PARTIALLY_REAL" ? "Partially Real" : (st === "PARTIALLY_FAKE" ? "Partially Fake" : (st === "REAL" ? "Real" : (st === "FAKE" || st === "CONTRADICTED" ? "Fake" : "Mixed")));
+      // apply status class
+      const cls = (st === "REAL") ? "real" : (st === "FAKE" || st === "CONTRADICTED") ? "fake" : "unknown";
+      statusSpan.className = "claim-status " + cls;
+      right.appendChild(statusSpan);
+
+      header.appendChild(left);
+      header.appendChild(right);
+
+      box.appendChild(header);
+
+      // confidence + explanation
+      const confLine = document.createElement("div");
+      confLine.style.marginTop = "0.6rem";
+      confLine.style.color = "var(--text-light)";
+      let cconf = typeof c.confidence === "number" ? c.confidence : 0;
+      if (cconf > 1.0) cconf = Math.min(1, cconf / 100);
+      confLine.textContent = "Claim confidence: " + cconf.toFixed(2);
+      box.appendChild(confLine);
+
+      if (c.explanation) {
+        const expl = document.createElement("div");
+        expl.style.marginTop = "0.5rem";
+        expl.innerHTML = `<em>${stripClaimCounts(c.explanation)}</em>`;
+        box.appendChild(expl);
+      }
+
+      // supporting evidence for claim
+      const supH = document.createElement("div");
+      supH.style.marginTop = "0.75rem";
+      supH.innerHTML = "<strong>Supporting evidence:</strong>";
+      box.appendChild(supH);
+      box.appendChild(buildEvidenceList(c.supporting_evidence || []));
+
+      // counter evidence for claim
+      const cntH = document.createElement("div");
+      cntH.style.marginTop = "0.45rem";
+      cntH.innerHTML = "<strong>Counter / Contradicting evidence:</strong>";
+      box.appendChild(cntH);
+      box.appendChild(buildEvidenceList(c.counter_evidence || []));
+
+      claimsContainer.appendChild(box);
+    });
+  }
+
+  section.style.display = "block";
+
+  // scroll to result
+  setTimeout(()=> {
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 120);
+}
+
+
+
+/* =====================================================
+   CLEAR INPUT
+===================================================== */
+function clearInput() {
+  document.getElementById("newsTextarea").value = "";
+  document.getElementById("resultSection").style.display = "none";
+}
+
+
+
+/* =====================================================
+   EVENT LISTENERS
+===================================================== */
+document.getElementById("openDomainsBtn").onclick = openDomains;
+document.getElementById("backToHomeBtn").onclick = goBackHome;
+document.getElementById("backBtn").onclick = goBackToDomains;
+
+document.getElementById("detectBtn").onclick = performDetection;
+document.getElementById("clearBtn").onclick = clearInput;
+
+
+
+/* =====================================================
+   INIT
+===================================================== */
+renderDomainTiles();
+
+/* =====================================================
+   ADDED: Carousel behavior (non-invasive)
+   Auto-rotates slides; clicking dots jumps to a slide.
+   This block is the only JS addition.
+===================================================== */
+(function initCarousel(){
+  try {
+    const slides = Array.from(document.querySelectorAll(".carousel-slide"));
+    const dots = Array.from(document.querySelectorAll(".carousel-dot"));
+    if (!slides.length) return;
+    let idx = 0;
+    let timer = null;
+    const activate = (i) => {
+      slides.forEach(s => s.classList.remove("active"));
+      dots.forEach(d => d.classList.remove("active"));
+      slides[i].classList.add("active");
+      if (dots[i]) dots[i].classList.add("active");
+      idx = i;
+    };
+    const next = () => activate((idx + 1) % slides.length);
+    // auto-advance every 3s
+    timer = setInterval(next, 3000);
+
+    // dot click handlers
+    dots.forEach((dot, i) => {
+      dot.addEventListener("click", () => {
+        activate(i);
+        // reset timer
+        clearInterval(timer);
+        timer = setInterval(next, 3000);
+      });
+    });
+
+    // pause on hover
+    const wrap = document.querySelector(".carousel-wrap");
+    if (wrap) {
+      wrap.addEventListener("mouseenter", () => clearInterval(timer));
+      wrap.addEventListener("mouseleave", () => { timer = setInterval(next, 3000); });
+    }
+  } catch (e) {
+    console.error("Carousel init error", e);
+  }
+})();
+</script>
+</body>
+</html>
