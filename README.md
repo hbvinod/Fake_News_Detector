@@ -74,30 +74,7 @@ The system allows users to select a news domain, submit a headline or article, a
 
 ---
 
-## 🔑 API Key Setup (OpenAI)
 
-1. Create an OpenAI API key from:
-   [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-
-2. Store it securely in a `.env` file:
-
-```env
-OPENAI_API_KEY=your_api_key_here
-```
-
-3. Load it in Python:
-
-```python
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
-```
-
-⚠️ **Never expose your API key in frontend code or public repositories.**
-
----
 
 ## 📂 Project Structure
 
