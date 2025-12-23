@@ -37,8 +37,8 @@ if not GROQ_KEY:
 client = OpenAI(api_key=CHATGPT_KEY)
 
 # ---------------------------------------------------------
-# FASTAPI SETUP
-# ---------------------------------------------------------
+
+# FASR API AETUP 
 app = FastAPI()
 
 app.add_middleware(
