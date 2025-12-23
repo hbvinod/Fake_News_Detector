@@ -51,7 +51,7 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# ---------------------------------------------------------
+
 # UTILITIES
 
 def clean_text(text: str) -> str:
