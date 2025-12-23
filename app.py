@@ -36,7 +36,7 @@ if not GROQ_KEY:
 # Initialize OpenAI client (your code used OpenAI(api_key=...))
 client = OpenAI(api_key=CHATGPT_KEY)
 
-# ---------------------------------------------------------
+
 
 # FAST API SETUP 
 app = FastAPI()
@@ -53,7 +53,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ---------------------------------------------------------
 # UTILITIES
-# ---------------------------------------------------------
+
 def clean_text(text: str) -> str:
     if not text:
         return ""
